@@ -284,8 +284,9 @@ fn get_symbols_from_pkgconfig(doc xml.XMLDocument, ignore_file string) []Symbol 
 // List of function names that cannot be correctly transformed by
 // V builtin function string.camel_to_snake()
 const fn_names = {
-	'virDomainGetOSType':   'get_os_type'
-	'virDomainAddIOThread': 'add_io_thread'
+	'virDomainGetOSType':           'get_os_type'
+	'virDomainAddIOThread':         'add_io_thread'
+	'virDomainSaveImageGetXMLDesc': 'save_image_get_xml_desc'
 }
 
 fn extract_function_def(doc xml.XMLNode) Function {

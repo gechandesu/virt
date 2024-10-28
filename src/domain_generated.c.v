@@ -428,48 +428,6 @@ pub fn (d Domain) save_flags(to string, dxml string, flags u32) !int {
 
 fn C.virDomainSaveFlags(domain voidptr, to &char, dxml &char, flags u32) int
 
-// This updates the definition of a domain stored in a saved state
-// file.  @file must be a file created previously by virDomainSave()
-// or virDomainSaveFlags().
-//
-// @dxml can be used to alter host-specific portions of the domain XML
-// that will be used when restoring an image.  For example, it is
-// possible to alter the backing filename that is associated with a
-// disk device, to match renaming done as part of backing up the disk
-// device while the domain is stopped.
-//
-// Normally, the saved state file will remember whether the domain was
-// running or paused, and restore defaults to the same state.
-// Specifying VIR_DOMAIN_SAVE_RUNNING or VIR_DOMAIN_SAVE_PAUSED in
-// @flags will override the default saved into the file; omitting both
-// leaves the file's default unchanged.  These two flags are mutually
-// exclusive.
-pub fn (d Domain) save_image_define_xml(file string, dxml string, flags u32) !int {
-	result := C.virDomainSaveImageDefineXML(d.ptr, &char(file.str), &char(dxml.str), flags)
-	if result == -1 {
-		return VirtError.new(last_error())
-	}
-	return result
-}
-
-fn C.virDomainSaveImageDefineXML(conn voidptr, file &char, dxml &char, flags u32) int
-
-// This method will extract the XML describing the domain at the time
-// a saved state file was created.  @file must be a file created
-// previously by virDomainSave() or virDomainSaveFlags().
-//
-// No security-sensitive data will be included unless @flags contains
-// VIR_DOMAIN_SAVE_IMAGE_XML_SECURE.
-pub fn (d Domain) save_image_get_xmld_esc(file string, flags u32) !string {
-	result := C.virDomainSaveImageGetXMLDesc(d.ptr, &char(file.str), flags)
-	if isnil(result) {
-		return VirtError.new(last_error())
-	}
-	return unsafe { cstring_to_vstring(result) }
-}
-
-fn C.virDomainSaveImageGetXMLDesc(conn voidptr, file &char, flags u32) &char
-
 // Configure the domain to be automatically started
 // when the host machine boots.
 pub fn (d Domain) set_autostart(autostart int) !int {

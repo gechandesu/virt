@@ -411,8 +411,8 @@ virDomainRestoreParams
 virDomainRevertToSnapshot
 #virDomainSave
 #virDomainSaveFlags
-#virDomainSaveImageDefineXML
-#virDomainSaveImageGetXMLDesc
+virDomainSaveImageDefineXML # TODO: requires virConnectPtr
+virDomainSaveImageGetXMLDesc # TODO: requires virConnectPtr
 virDomainSaveParams # TODO: implement virTypedParameter
 virDomainScreenshot
 virSecretDefineXML
