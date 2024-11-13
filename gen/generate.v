@@ -401,13 +401,13 @@ fn main() {
 		helptext := flag.to_doc[FlagConfig](
 			style:  .v
 			fields: {
-				'help':           'Print this help message and exit.'
-				'by_prefix':      'Select symbols by name prefix. Can contain full name.'
-				'not_prefix':     'Ignore symbols prefixed by prefix. Can contain full name.'
-				'headers':        'C header file name, e.g. "libvirt.h", etc.'
-				'headers_path':   'Path to search C headers [default: /usr/include/libvirt]'
-				'print_symbols':  'Just print symbols instead of generating code.'
-				'symbols_ignore': 'Path to symbols-ignore file [default: symbols-ignore]'
+				'help':          'Print this help message and exit.'
+				'by_prefix':     'Select symbols by name prefix. Can contain full name.'
+				'not_prefix':    'Ignore symbols prefixed by prefix. Can contain full name.'
+				'headers':       'C header file name, e.g. "libvirt.h", etc.'
+				'headers_path':  'Path to search C headers [default: /usr/include/libvirt]'
+				'print_symbols': 'Just print symbols instead of generating code.'
+				'ignore_file':   'Path to symbols-ignore file [default: symbols-ignore]'
 			}
 		)!
 		println(helptext)
@@ -417,7 +417,7 @@ fn main() {
 	mut all_symbols := []Symbol{}
 	mut symbols := []Symbol{}
 	for doc in xml_docs {
-		all_symbols << get_symbols_from_pkgconfig(doc, flags.symbols_ignore)
+		all_symbols << get_symbols_from_pkgconfig(doc, flags.ignore_file)
 	}
 	for prefix in flags.by_prefix {
 		symbols = arrays.append(symbols, all_symbols.filter(it.c_name.starts_with(prefix)))
@@ -439,11 +439,11 @@ fn main() {
 
 @[xdoc: 'V code generator for libvirt binding.']
 struct FlagConfig {
-	help           bool
-	by_prefix      []string
-	not_prefix     []string
-	headers        []string @[only: header]
-	headers_path   string = '/usr/include/libvirt'
-	print_symbols  bool
-	symbols_ignore string = 'symbols-ignore'
+	help          bool
+	by_prefix     []string
+	not_prefix    []string
+	headers       []string @[only: header]
+	headers_path  string = '/usr/include/libvirt'
+	print_symbols bool
+	ignore_file   string = 'symbols-ignore'
 }

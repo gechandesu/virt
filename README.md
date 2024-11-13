@@ -8,7 +8,7 @@ programs. See [README](src/README.md).
 WIP.
 
 > [!WARNING]
-> This is an xperimental module. Not ready for production use.
+> This is an experimental module. Not ready for production use.
 
 ## Docs
 
