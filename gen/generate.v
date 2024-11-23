@@ -34,8 +34,8 @@ const types = {
 	'void':                  ''
 	'void *':                'voidptr'
 	'byte *':                '&u8'
-	'size_t':                'string' // FIXME
-	'size_t *':              'string' // FIXME
+	'size_t':                'usize'
+	'size_t *':              '&usize'
 }
 
 type Symbol = Const | Function | FunctionType // | Struct | StructField
