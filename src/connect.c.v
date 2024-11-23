@@ -26,7 +26,6 @@ fn C.virConnectClose(voidptr) int
 fn C.virDomainLookupByName(voidptr, &char) voidptr
 
 pub fn Connect.open(uri string) !Connect {
-	set_dummy_global_error_handler()
 	ptr := C.virConnectOpen(&char(uri.str))
 	if isnil(ptr) {
 		return VirtError.new(last_error())

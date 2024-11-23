@@ -15,9 +15,9 @@
 
 module virt
 
-#flag -I/usr/include/libvirt
-#flag -lvirt
-#include <libvirt.h>
+fn init() {
+	set_dummy_global_error_handler()
+}
 
 struct Connect {
 	ptr voidptr
@@ -74,14 +74,3 @@ struct StorageVol {
 struct Stream {
 	ptr voidptr
 }
-
-// version returs livbirt version as integer.
-pub fn version() int {
-	mut libver := 0
-	unsafe {
-		C.virGetVersion(&libver, nil, nil)
-	}
-	return *&libver
-}
-
-fn C.virGetVersion(&int, &char, &int) int
