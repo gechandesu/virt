@@ -4,7 +4,7 @@ module virt
 #flag -lvirt
 #include <libvirt.h>
 
-// version returs livbirt library version.
+// version returs library version.
 // See also https://libvirt.org/html/libvirt-libvirt-host.html#virGetVersion
 pub fn version() int {
 	mut libver := 0

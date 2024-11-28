@@ -11,10 +11,8 @@ doc:
 	v doc -f html -m ./$(SRC_DIR) -o $(DOC_DIR)
 	mv $(DOC_DIR)/virt.html $(DOC_DIR)/index.html || true
 
-serve_doc:
+serve: clean doc
 	v -e "import net.http.file; file.serve(folder: '$(DOC_DIR)')"
-
-serve: clean doc serve_doc
 
 generate:
 	v run gen/generate.v -header libvirt.h -by-prefix virConnect > $(SRC_DIR)/connect_generated.c.v
