@@ -6,7 +6,6 @@
 virConnect
 virConnectPtr
 virConnectOpen
-virConnectClose
 virDomain
 virDomainPtr
 

@@ -19,12 +19,7 @@ module virt
 #flag -lvirt
 #include <libvirt.h>
 
-fn C.virConnectOpen(&char) voidptr
-
-fn C.virConnectClose(voidptr) int
-
-fn C.virDomainLookupByName(voidptr, &char) voidptr
-
+// See also https://libvirt.org/html/libvirt-libvirt-host.html#virConnectOpen
 pub fn Connect.open(uri string) !Connect {
 	ptr := C.virConnectOpen(&char(uri.str))
 	if isnil(ptr) {
@@ -33,6 +28,9 @@ pub fn Connect.open(uri string) !Connect {
 	return Connect{ptr}
 }
 
+fn C.virConnectOpen(&char) voidptr
+
+// See also https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainLookupByName
 pub fn (c Connect) lookup_domain_by_name(name string) !Domain {
 	ptr := C.virDomainLookupByName(c.ptr, &char(name.str))
 	if isnil(ptr) {
@@ -41,7 +39,4 @@ pub fn (c Connect) lookup_domain_by_name(name string) !Domain {
 	return Domain{ptr}
 }
 
-pub fn (c Connect) close() int {
-	num := C.virConnectClose(c.ptr)
-	return num
-}
+fn C.virDomainLookupByName(voidptr, &char) voidptr
