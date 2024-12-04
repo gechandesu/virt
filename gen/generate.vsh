@@ -1,4 +1,4 @@
-#!/usr/bin/env -S v
+#!/usr/bin/env -S v run
 
 module main
 
@@ -445,14 +445,10 @@ fn main() {
 			} else {
 				match symbol {
 					Function {
-						mut vstruct := ''
-						if symbol.method_of != '' {
-							vstruct = '(${symbol.method_of[..1].to_lower()} ${symbol.method_of}) '
-						}
-						println('fn ${vstruct}${symbol.v_name}')
+						println(symbol.gen_fn_signature())
 					}
 					else {
-						println('${symbol.type_name().to_lower()} ${symbol.v_name}')
+						println('pub ${symbol.type_name().to_lower()} ${symbol.v_name}')
 					}
 				}
 			}
