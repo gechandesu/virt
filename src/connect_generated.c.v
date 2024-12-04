@@ -13,7 +13,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with virt. If not, see <https://www.gnu.org/licenses/>.
 
-// WARN: This file is automatically written by generate.v
+// ! WARNING !
+// This file is automatically written by generate.vsh
 // do not edit it manually, any changes made here will be lost!
 
 module virt
@@ -22,16 +23,18 @@ module virt
 #flag -lvirt
 #include <libvirt.h>
 
-// Increment the reference count on the connection. For each
-// additional call to this method, there shall be a corresponding
-// call to virConnectClose to release the reference count, once
-// the caller no longer needs the reference to this object.
-//
-// This method is typically useful for applications where multiple
-// threads are using a connection, and it is required that the
-// connection remain open until all threads have finished using
-// it. ie, each new thread using a connection would increment
-// the reference count.
+// See also https://libvirt.org/html/libvirt-libvirt-host.html#virConnectClose
+pub fn (c Connect) close() !int {
+	result := C.virConnectClose(c.ptr)
+	if result == -1 {
+		return VirtError.new(last_error())
+	}
+	return result
+}
+
+fn C.virConnectClose(conn voidptr) int
+
+// See also https://libvirt.org/html/libvirt-libvirt-host.html#virConnectRef
 pub fn (c Connect) ref() !int {
 	result := C.virConnectRef(c.ptr)
 	if result == -1 {

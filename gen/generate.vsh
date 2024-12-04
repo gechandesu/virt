@@ -1,7 +1,5 @@
-/*
- * V binding generator for libvirt C API
- *
- */
+#!/usr/bin/env -S v
+
 module main
 
 import arrays
@@ -13,7 +11,7 @@ import strings
 const module_name = 'virt'
 const symbols_ignore_file = 'symbols-ignore'
 
-// C type -> V type
+// C type -> V C-style type
 const types = {
 	'const char *':          '&char'
 	'const unsigned char *': '&char'
@@ -44,46 +42,150 @@ struct Const {
 mut:
 	c_name string
 	c_type string
-	name   string
-	type   string
+	v_name string
+	v_type string
 	value  string
 	doc    string
 }
 
+fn (c Const) gen() string {
+	mut decl := ''
+	if c.doc != '' {
+		decl += format_doc_string(c.doc) + '\n'
+	}
+	decl += 'pub const ${c.v_name} = C.${c.c_name}' + '\n'
+	return decl
+}
+
 struct Function {
 mut:
-	c_name    string
-	c_type    string
-	type      string
-	name      string
-	args      []FunctionArg
-	doc       string
-	method_of string // name of corresponding V struct
+	c_source_file string
+	c_name        string
+	c_return_type string
+	v_name        string
+	v_return_type string
+	args          []FunctionArg
+	method_of     string // name of corresponding V struct
+	self_var      string
 }
 
 struct FunctionArg {
 mut:
 	c_name string
 	c_type string
-	name   string
-	type   string
+	v_name string
+	v_type string
 	doc    string
+}
+
+fn (f Function) gen_c_fn() string {
+	mut fn_args := []string{}
+	for arg in f.args {
+		fn_args << arg.v_name + ' ' + arg.v_type
+	}
+	return 'fn C.${f.c_name}(${fn_args.join(', ')}) ${f.v_return_type}'
+}
+
+fn (f Function) gen_fn_doc() string {
+	return '// See also https://libvirt.org/html/libvirt-${f.c_source_file}.html#${f.c_name}'
+}
+
+fn (f Function) gen_fn_signature() string {
+	mut fn_args := []string{}
+	for i, arg in f.args {
+		if arg.c_type == 'vir' + f.method_of + 'Ptr' && i == 0 {
+			continue
+		}
+		mut v_type := arg.v_type
+		if v_type == '&char' {
+			v_type = 'string'
+		}
+		fn_args << arg.v_name + ' ' + v_type
+	}
+	mut return_type := f.v_return_type
+	if return_type.ends_with('char') {
+		return_type = 'string'
+	}
+	mut signature := ''
+	signature += 'pub fn'
+	signature += ' '
+	if f.method_of != '' {
+		signature += '(${f.self_var} ${f.method_of})'
+	}
+	signature += ' '
+	signature += f.v_name
+	signature += '('
+	signature += fn_args.join(', ')
+	signature += ')'
+	signature += ' '
+	signature += '!' + return_type
+	return signature
+}
+
+fn (f Function) gen_fn_body() string {
+	mut c_fn_args := []string{}
+	for i, arg in f.args {
+		if arg.c_type == 'vir' + f.method_of + 'Ptr' && i == 0 {
+			continue
+		}
+		mut c_arg := arg.c_name
+		if arg.v_type == '&char' {
+			c_arg = '&char(${arg.c_name}.str)'
+		}
+		c_fn_args << c_arg
+	}
+	mut body := strings.new_builder(500)
+	if c_fn_args.len > 0 {
+		body.writeln('\tresult := C.${f.c_name}(${f.self_var}.ptr, ${c_fn_args.join(', ')})')
+	} else {
+		body.writeln('\tresult := C.${f.c_name}(${f.self_var}.ptr)')
+	}
+	mut return_type := f.v_return_type
+	if return_type.ends_with('char') {
+		return_type = 'string'
+	}
+	if return_type in ['int', 'u32'] {
+		body.writeln('\tif result == -1 {')
+		body.writeln('\t\treturn VirtError.new(last_error())')
+		body.writeln('\t}')
+		body.writeln('\treturn result')
+	} else if return_type == 'string' {
+		body.writeln('\tif isnil(result) {')
+		body.writeln('\t\treturn VirtError.new(last_error())')
+		body.writeln('\t}')
+		body.writeln('\treturn unsafe { cstring_to_vstring(result) }')
+	}
+	return body.str()
+}
+
+fn (f Function) gen() string {
+	mut func := strings.new_builder(1000)
+	func.writeln(f.gen_fn_doc())
+	func.writeln(f.gen_fn_signature() + ' {')
+	func.writeln(f.gen_fn_body())
+	func.writeln('}')
+	func.writeln('')
+	func.writeln(f.gen_c_fn())
+	return func.str()
 }
 
 struct FunctionType {
 mut:
-	c_name string
-	c_type string
-	name   string
-	type   string
-	args   []FunctionArg
-	doc    string
+	c_name        string
+	c_return_type string
+	v_name        string
+	v_return_type string
+	args          []FunctionArg
+}
+
+fn (f FunctionType) gen() string {
+	return ''
 }
 
 // TODO
 struct Struct {
 	c_name string
-	name   string
+	v_name string
 	fields []StructField
 	doc    string
 }
@@ -92,110 +194,39 @@ struct Struct {
 struct StructField {
 	c_name string
 	c_type string
-	name   string
-	type   string
+	v_name string
+	v_type string
 	doc    string
 }
 
-fn write_file_header(mut b strings.Builder, mod string, headers []string, headers_path string) {
-	b.writeln(license_notice_template())
-	b.writeln('// WARN: This file is automatically written by generate.v')
+fn write_file_header(mut b strings.Builder, mod string, lib string, headers []string, headers_path string) {
+	modname := module_name
+	b.writeln($tmpl('notice.tmpl'))
+	b.writeln('// ! WARNING !')
+	b.writeln('// This file is automatically written by generate.vsh')
 	b.writeln('// do not edit it manually, any changes made here will be lost!')
 	b.writeln('')
 	b.writeln('module ${mod}')
 	b.writeln('')
 	b.writeln('#flag -I${headers_path}')
-	b.writeln('#flag -lvirt')
+	b.writeln('#flag -l${lib}')
 	for header in headers {
 		b.writeln('#include <${header}>')
 	}
 	b.writeln('')
 }
 
-fn license_notice_template() string {
-	modname := module_name
-	return $tmpl('notice.tmpl')
-}
-
 fn write_file_content(mut b strings.Builder, symbols []Symbol) {
 	for symbol in symbols {
 		match symbol {
 			Const {
-				if symbol.doc != '' {
-					b.writeln(format_doc_string(symbol.doc))
-				}
-				b.writeln('pub const ${symbol.name} = C.${symbol.c_name}')
-				b.writeln('')
+				b.writeln(symbol.gen())
 			}
 			Function {
-				// TODO move this code to separate function
-				// V function defenition
-				if symbol.doc != '' {
-					b.writeln(format_doc_string(symbol.doc))
-				}
-				letter := symbol.method_of[..1].to_lower()
-				mut may_be_null := false
-				mut v_return_type := ctype_to_vtype(symbol.c_type)
-				if v_return_type.contains('char') {
-					v_return_type = 'string'
-					may_be_null = true
-				}
-				mut fn_c_args_arr := []string{}
-				mut fn_v_args_arr := []string{}
-				for idx, arg in symbol.args {
-					if arg.c_type.ends_with('Ptr') && idx == 0 {
-						continue // skip first argument if it is pointer
-					}
-					mut c_arg := arg.name
-					mut v_arg := arg.name
-					mut v_arg_type := ctype_to_vtype(arg.c_type)
-					match v_arg_type {
-						'&char' {
-							c_arg = '&char(${arg.name}.str)'
-							v_arg_type = 'string'
-						}
-						else {}
-					}
-					fn_v_args_arr << v_arg + ' ' + v_arg_type
-					fn_c_args_arr << c_arg
-				}
-				fn_c_args := fn_c_args_arr.join(', ')
-				fn_v_args := fn_v_args_arr.join(', ')
-
-				// V function signature
-				b.writeln('pub fn (${letter} ${symbol.method_of}) ' +
-					'${symbol.name}(${fn_v_args}) !${v_return_type} {')
-				// C function call
-				if fn_c_args_arr.len > 0 {
-					b.writeln('\tresult := C.${symbol.c_name}(${letter}.ptr, ${fn_c_args})')
-				} else {
-					b.writeln('\tresult := C.${symbol.c_name}(${letter}.ptr)')
-				}
-				// C function result handling
-				if v_return_type in ['int', 'u32'] {
-					b.writeln('\tif result == -1 {')
-					b.writeln('\t\treturn VirtError.new(last_error())')
-					b.writeln('\t}')
-					b.writeln('\treturn result')
-				} else if may_be_null && v_return_type == 'string' {
-					b.writeln('\tif isnil(result) {')
-					b.writeln('\t\treturn VirtError.new(last_error())')
-					b.writeln('\t}')
-					b.writeln('\treturn unsafe { cstring_to_vstring(result) }')
-				}
-				b.writeln('}')
-				b.writeln('')
-				// C function defenition
-				b.writeln(generate_c_fn(symbol))
-				b.writeln('')
+				b.writeln(symbol.gen())
 			}
 			FunctionType {
-				// TODO
-				if symbol.doc != '' {
-					b.writeln(format_doc_string(symbol.doc))
-				}
-				b.writeln('pub type ${symbol.name} = fn()')
-				b.writeln('')
+				b.writeln(symbol.gen())
 			}
 		}
 	}
@@ -247,6 +278,11 @@ fn get_symbols_from_pkgconfig(doc xml.XMLDocument, ignore_file string) []Symbol 
 	mut symbols := []Symbol{}
 	for symbol in raw_symbols[0].children {
 		s := symbol as xml.XMLNode
+		if os.getenv('VGEN_PRINTALLC') != '' {
+			println(s)
+			// println('${s.name} ${s.attributes['name']} ${s.attributes['type']}')
+			continue
+		}
 		match s.name {
 			'function' {
 				all_symbols << extract_function_def(s)
@@ -256,6 +292,9 @@ fn get_symbols_from_pkgconfig(doc xml.XMLDocument, ignore_file string) []Symbol 
 			}
 			'enum' {
 				all_symbols << extract_constant_def(s)
+			}
+			'typedef' {
+				// TODO
 			}
 			'struct' {
 				// TODO
@@ -270,10 +309,10 @@ fn get_symbols_from_pkgconfig(doc xml.XMLDocument, ignore_file string) []Symbol 
 		symbols << symbol
 	}
 	symbols.sort_with_compare(fn (a &Symbol, b &Symbol) int {
-		if a.name < b.name {
+		if a.v_name < b.v_name {
 			return -1
 		}
-		if a.name > b.name {
+		if a.v_name > b.v_name {
 			return 1
 		}
 		return 0
@@ -281,7 +320,18 @@ fn get_symbols_from_pkgconfig(doc xml.XMLDocument, ignore_file string) []Symbol 
 	return symbols
 }
 
-// List of function names that cannot be correctly transformed by
+// Name prefixes list. The items order matters.
+const name_prefixes = [
+	'virDomainCheckpoint',
+	'virDomainSnapshot',
+	'virDomain',
+	'virConnect',
+	'virStream',
+	'virStoragePool',
+	'virStorageVol',
+]
+
+// Map of function names that cannot be correctly transformed by
 // V builtin function string.camel_to_snake()
 const fn_names = {
 	'virDomainGetOSType':           'get_os_type'
@@ -293,65 +343,37 @@ fn extract_function_def(doc xml.XMLNode) Function {
 	mut func := Function{}
 	func.c_name = doc.attributes['name']
 	ret := doc.get_elements_by_tag('return')[0] as xml.XMLNode
-	func.c_type = ret.attributes['type']
+	func.c_return_type = ret.attributes['type']
 	name := doc.attributes['name']
-
-	// TODO: make this code compact and clean
-	if name.starts_with('virDomainCheckpoint') {
-		func.name = fn_names[name] or { name.all_after('virDomainCheckpoint').camel_to_snake() }
-		func.method_of = 'DomainCheckpoint'
-	} else if name.starts_with('virDomainSnapshot') {
-		func.name = fn_names[name] or { name.all_after('virDomainSnapshot').camel_to_snake() }
-		func.method_of = 'DomainSnapshot'
-	} else if name.starts_with('virDomain') {
-		func.name = fn_names[name] or { name.all_after('virDomain').camel_to_snake() }
-		func.method_of = 'Domain'
-	} else if name.starts_with('virConnect') {
-		func.name = fn_names[name] or { name.all_after('virConnect').camel_to_snake() }
-		func.method_of = 'Connect'
-	} else if name.starts_with('virStream') {
-		func.name = fn_names[name] or { name.all_after('virStream').camel_to_snake() }
-		func.method_of = 'Stream'
-	} else if name.starts_with('virStoragePool') {
-		func.name = fn_names[name] or { name.all_after('virStoragePool').camel_to_snake() }
-		func.method_of = 'StoragePool'
-	} else if name.starts_with('virStorageVol') {
-		func.name = fn_names[name] or { name.all_after('virStorageVol').camel_to_snake() }
-		func.method_of = 'StorageVol'
+	for prefix in name_prefixes {
+		if name.starts_with(prefix) {
+			func.v_name = fn_names[name] or { name.all_after(prefix).camel_to_snake() }
+			func.method_of = prefix.trim_left('vir')
+			func.self_var = func.method_of[..1].to_lower()
+			break
+		}
 	}
-	func.type = ctype_to_vtype(func.c_type)
+	func.v_return_type = ctype_to_vtype(func.c_return_type)
 	for arg in doc.get_elements_by_tag('arg') {
 		func.args << FunctionArg{
 			c_name: arg.attributes['name']
 			c_type: arg.attributes['type']
-			name:   arg.attributes['name']
+			v_name: arg.attributes['name'] // save arg names unchanged
+			v_type: ctype_to_vtype(arg.attributes['type'])
 			doc:    arg.attributes['info']
 		}
 	}
-	func.doc = extract_function_doc(doc)
+	func.c_source_file = doc.attributes['file']
 	return func
-}
-
-fn extract_function_doc(doc xml.XMLNode) string {
-	mut docs := []string{}
-	if doc.children.len > 0 {
-		info := doc.children[0] as xml.XMLNode
-		for node in info.children {
-			cdata := node as xml.XMLCData
-			docs << cdata.text
-		}
-	}
-	return docs.join('\n')
 }
 
 fn extract_function_type_def(doc xml.XMLNode) FunctionType {
 	funcdef := extract_function_def(doc)
 	return FunctionType{
-		c_name: funcdef.c_name
-		c_type: funcdef.c_type
-		name:   doc.attributes['name'].trim_left('virConnectDomain') // FIXME
-		args:   funcdef.args
-		doc:    funcdef.doc
+		c_name:        funcdef.c_name
+		c_return_type: funcdef.c_return_type
+		v_name:        doc.attributes['name'].trim_left('virConnectDomain') // FIXME
+		args:          funcdef.args
 	}
 }
 
@@ -359,27 +381,12 @@ fn extract_constant_def(doc xml.XMLNode) Const {
 	return Const{
 		c_name: doc.attributes['name']
 		c_type: doc.attributes['type']
-		name:   doc.attributes['name'].trim_left('VIR_').to_lower()
+		v_name: doc.attributes['name'].trim_left('VIR_').to_lower()
 		value:  doc.attributes['value']
 		doc:    doc.attributes['info']
 	}
 }
 
-fn generate_c_fn(f Function) string {
-	fn_args := generate_c_fn_args(f.args)
-	return_type := ctype_to_vtype(f.c_type)
-	return 'fn C.${f.c_name}(${fn_args}) ${return_type}'
-}
-
-fn generate_c_fn_args(args []FunctionArg) string {
-	mut signature := []string{}
-	for arg in args {
-		signature << arg.name + ' ' + ctype_to_vtype(arg.c_type)
-	}
-	return signature.join(', ')
-}
-
-// ctype_to_vtype converts C types to corresponding V C-style types.
 fn ctype_to_vtype(ctype string) string {
 	mut vtype := types[ctype] or { ctype }
 	if vtype.ends_with('Ptr') {
@@ -406,7 +413,9 @@ fn main() {
 				'not_prefix':    'Ignore symbols prefixed by prefix. Can contain full name.'
 				'headers':       'C header file name, e.g. "libvirt.h", etc.'
 				'headers_path':  'Path to search C headers [default: /usr/include/libvirt]'
+				'lib':           'Library name to link [default: virt]'
 				'print_symbols': 'Just print symbols instead of generating code.'
+				'print_c_names': 'In conjuction with -print-symbols print only original C symbol names.'
 				'ignore_file':   'Path to symbols-ignore file [default: symbols-ignore]'
 			}
 		)!
@@ -419,20 +428,39 @@ fn main() {
 	for doc in xml_docs {
 		all_symbols << get_symbols_from_pkgconfig(doc, flags.ignore_file)
 	}
-	for prefix in flags.by_prefix {
-		symbols = arrays.append(symbols, all_symbols.filter(it.c_name.starts_with(prefix)))
+	if flags.by_prefix.len == 0 {
+		symbols = all_symbols.clone()
+	} else {
+		for prefix in flags.by_prefix {
+			symbols = arrays.append(symbols, all_symbols.filter(it.c_name.starts_with(prefix)))
+		}
 	}
 	for prefix in flags.not_prefix {
 		symbols = symbols.filter(!it.c_name.starts_with(prefix))
 	}
 	if flags.print_symbols {
 		for symbol in symbols {
-			println(symbol.c_name)
+			if flags.print_c_names {
+				println(symbol.c_name)
+			} else {
+				match symbol {
+					Function {
+						mut vstruct := ''
+						if symbol.method_of != '' {
+							vstruct = '(${symbol.method_of[..1].to_lower()} ${symbol.method_of}) '
+						}
+						println('fn ${vstruct}${symbol.v_name}')
+					}
+					else {
+						println('${symbol.type_name().to_lower()} ${symbol.v_name}')
+					}
+				}
+			}
 		}
 		exit(0)
 	}
 	mut b := strings.new_builder(2000)
-	write_file_header(mut b, module_name, flags.headers, flags.headers_path)
+	write_file_header(mut b, module_name, flags.lib, flags.headers, flags.headers_path)
 	write_file_content(mut b, symbols)
 	print(b)
 }
@@ -444,6 +472,8 @@ struct FlagConfig {
 	not_prefix    []string
 	headers       []string @[only: header]
 	headers_path  string = '/usr/include/libvirt'
+	lib           string = 'virt'
 	print_symbols bool
+	print_c_names bool
 	ignore_file   string = 'symbols-ignore'
 }

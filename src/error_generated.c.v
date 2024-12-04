@@ -13,7 +13,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with virt. If not, see <https://www.gnu.org/licenses/>.
 
-// WARN: This file is automatically written by generate.v
+// ! WARNING !
+// This file is automatically written by generate.vsh
 // do not edit it manually, any changes made here will be lost!
 
 module virt

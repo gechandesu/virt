@@ -17,10 +17,7 @@ bin/
 # ENV
 .env
 
-# vweb and database
-*.db
-*.js
-
 /doc
+/gen/generate
 main.v
 TODO.txt
