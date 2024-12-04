@@ -1,7 +1,8 @@
-# V binding for libvirt C API
+# V language binding for libvirt native C API
 
-This module allows you to use libvirt methods from [V](https://vlang.io)
-programs. See [README](src/README.md).
+This module allows you to use libvirt in [V](https://vlang.io) programs.
+
+See [src/README.md](src/README.md) and [examples](examples).
 
 ## Status
 
@@ -10,49 +11,42 @@ WIP.
 > [!WARNING]
 > This is an experimental module. Not ready for production use.
 
+libvirt C API coverge is super low for now.
+
 ## Docs
 
 Currently there is no documentation site. You can generate HTML docs and serve
 it via command:
+
 ```
 make serve
 ```
 
 ## About this binding
 
-It is assumed that the main part of the V code will be automatically generated
-by the generate.v from the XML specification provided by libvirt in pkg-config
-(similar to the Python binding).
+This binding is mostly auto-generated. Files with the `_generated.c.v` suffix
+are generated automatically based on the libvirt C API XML specification
+provided via pkg-config. Other parts of this library are written by hand.
 
-`generate.v` does its job in several stages:
+Generation of C wrappers and V code is done by the `gen/generate.vsh` script.
+It uses `symbols-ignore` file to select the symbols for which code will be
+generated. Any symbol mentioned in this file will be ignored. See comments in
+[symbols-ignore](symbols-ignore) and [gen/generate.vsh](gen/generate.vsh)
+source code for details.
 
-1. Getting symbols. The script gets XML files from pkg-config describing
-libvirt symbols and translates them into an intermediate representation.
-See the `Symbol` sumtype. The script then works only with these
-representations.
+Not all code can be easily generated automatically. gen/generate.vsh does very
+simple conversions, it is not very smart. Therefore, any symbols that it cannot
+convert are easier to write manually and add to symbols-ignore so that
+generate.vsh does not try to generate them.
 
-2. The script reads the `symbols-ignore` file and excludes the symbols listed
-there from the list of symbols found in the first stage.
-
-3. Symbol names are converted from camelCase to snake\_case with the removal
-of some parts of the names. This is necessary so that the library interface
-complies with V code style conventions.
-
-4. `generate.v` generates C wrappers and V code simply operating on strings.
-
-5. The resulting code is written to files. See Makefile.
-
-Not all code can be easily generated automatically. generate.v does very
-simple conversions, it is not very smart. Therefore, any symbols that it
-cannot convert are easier to write manually and add to symbols-ignore so that
-generate.v does not try to generate them.
-
-Since libvirt is a very large library, and usually only a small number of its
+Since libvirt has a very large API and usually only a small number of its
 capabilities are used, I decided to add most of the library symbols to
-`symbols-ignore`. Gradually improving the generator and adding functions
-manually, this binding should reach 100% coverage of the libvirt C API. Until
-then, the binding is considered experimental.
+symbols-ignore. Gradually improving the generator and adding functions manually
+this binding should reach 100% coverage of the libvirt C API. Unshtil then 
+he binding is considered experimental.
 
-## License
+##sh License
 
-LGPL-3.0-or-later. See COPYING and COPYING.LESSER for information.
+`LGPL-3.0-or-later`
+
+See [COPYING](COPYING) and [COPYING.LESSER](COPYING.LESSER) for information.
