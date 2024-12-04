@@ -1,10 +1,19 @@
 ### Running the examples
 
-You can run the examples by simply executing commands like this in the current
-directory:
+You can run the examples by `v run` in the current directory.
+
+If `virt` module is installed in your `@vmodules` directory (usually
+`~/.vmodules`) via `v install` then run:
 
 ```
 v run get_version.v
+```
+
+If you just cloned this repo and `virt` module is not installed yet, first set
+modules search path in `VFLAGS` environment variable:
+
+```
+export VFLAGS="-path $(realpath $PWD/../../)|@vlib|@vmodules"
 ```
 
 The library assumes that `libvirtd` is installed and running on the host where

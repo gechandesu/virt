@@ -1,6 +1,6 @@
 import virt
 
 fn main() {
-	// Note: for call this method libvirtd connection is not required.
+	// Note: libvirtd connection is not required for this method.
 	println('libvirt version is ${virt.version()}')
 }
