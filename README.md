@@ -45,7 +45,7 @@ symbols-ignore. Gradually improving the generator and adding functions manually
 this binding should reach 100% coverage of the libvirt C API. Unshtil then 
 he binding is considered experimental.
 
-##sh License
+## License
 
 `LGPL-3.0-or-later`
 
