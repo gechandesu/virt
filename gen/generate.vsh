@@ -111,8 +111,8 @@ fn (f Function) gen_fn_signature() string {
 	signature += ' '
 	if f.method_of != '' {
 		signature += '(${f.self_var} ${f.method_of})'
+		signature += ' '
 	}
-	signature += ' '
 	signature += f.v_name
 	signature += '('
 	signature += fn_args.join(', ')
@@ -241,7 +241,7 @@ fn format_doc_string(doc string) string {
 
 fn get_pkgconfig_data() []xml.XMLDocument {
 	pkgconf := os.execute_opt('pkg-config --variable libvirt_api libvirt') or {
-		eprintln('error: cannot retrieve data from pkg-config')
+		eprintln('error: cannot retrieve data from pkg-config: ${err}')
 		exit(1)
 	}
 	mut docs := []xml.XMLDocument{}
@@ -279,8 +279,7 @@ fn get_symbols_from_pkgconfig(doc xml.XMLDocument, ignore_file string) []Symbol 
 	for symbol in raw_symbols[0].children {
 		s := symbol as xml.XMLNode
 		if os.getenv('VGEN_PRINTALLC') != '' {
-			println(s)
-			// println('${s.name} ${s.attributes['name']} ${s.attributes['type']}')
+			println('${s.name} ${s.attributes['name']} ${s.attributes['type']}')
 			continue
 		}
 		match s.name {
@@ -292,9 +291,6 @@ fn get_symbols_from_pkgconfig(doc xml.XMLDocument, ignore_file string) []Symbol 
 			}
 			'enum' {
 				all_symbols << extract_constant_def(s)
-			}
-			'typedef' {
-				// TODO
 			}
 			'struct' {
 				// TODO
