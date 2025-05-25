@@ -45,6 +45,14 @@ pub const war_no_storage = C.VIR_WAR_NO_STORAGE
 // was denied
 pub const err_access_denied = C.VIR_ERR_ACCESS_DENIED
 
+// guest agent responded with failure
+// to a command
+pub const err_agent_command_failed = C.VIR_ERR_AGENT_COMMAND_FAILED
+
+// guest agent didn&apos;t respond to a non-sync
+// command within timeout
+pub const err_agent_command_timeout = C.VIR_ERR_AGENT_COMMAND_TIMEOUT
+
 // guest agent is unresponsive,
 // not running or not usable
 pub const err_agent_unresponsive = C.VIR_ERR_AGENT_UNRESPONSIVE

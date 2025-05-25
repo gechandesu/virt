@@ -100,6 +100,17 @@ pub fn (d Domain) create() !int {
 
 fn C.virDomainCreate(domain voidptr) int
 
+// See also https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainDelThrottleGroup
+pub fn (d Domain) del_throttle_group(group string, flags u32) !int {
+	result := C.virDomainDelThrottleGroup(d.ptr, &char(group.str), flags)
+	if result == -1 {
+		return VirtError.new(last_error())
+	}
+	return result
+}
+
+fn C.virDomainDelThrottleGroup(dom voidptr, group &char, flags u32) int
+
 // See also https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainDestroy
 pub fn (d Domain) destroy() !int {
 	result := C.virDomainDestroy(d.ptr)
@@ -253,6 +264,17 @@ pub fn (d Domain) set_autostart(autostart int) !int {
 }
 
 fn C.virDomainSetAutostart(domain voidptr, autostart int) int
+
+// See also https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainSetThrottleGroup
+pub fn (d Domain) set_throttle_group(group string, params voidptr, nparams int, flags u32) !int {
+	result := C.virDomainSetThrottleGroup(d.ptr, &char(group.str), params, nparams, flags)
+	if result == -1 {
+		return VirtError.new(last_error())
+	}
+	return result
+}
+
+fn C.virDomainSetThrottleGroup(dom voidptr, group &char, params voidptr, nparams int, flags u32) int
 
 // See also https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainSetVcpu
 pub fn (d Domain) set_vcpu(vcpumap string, state int, flags u32) !int {

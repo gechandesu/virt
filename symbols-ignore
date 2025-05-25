@@ -125,6 +125,7 @@ virDomainFSThaw
 virDomainFSTrim
 virConnectGetAllDomainStats
 virDomainGetAutostart # TODO: Result must be bool
+virDomainGetAutostartOnce
 virDomainGetBlkioParameters
 virDomainGetBlockInfo
 virDomainGetBlockIoTune
@@ -434,6 +435,7 @@ virSecretUndefine
 virDomainSendKey
 virDomainSendProcessSignal
 #virDomainSetAutostart
+virDomainSetAutostartOnce
 virDomainSetBlkioParameters
 virDomainSetBlockIoTune
 virDomainSetBlockThreshold
