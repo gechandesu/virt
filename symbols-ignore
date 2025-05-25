@@ -1,4 +1,4 @@
-# This file contains symbols which cannot be processed by generate.v.
+# This file contains symbols which cannot be processed by generate.vsh.
 # Add the symbol name on a new line. There can only be one name per line.
 # Comments including inline starting with # and blank lines are allowed.
 

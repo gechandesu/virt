@@ -36,7 +36,7 @@ const types = {
 	'size_t *':              '&usize'
 }
 
-type Symbol = Const | Function | FunctionType // | Struct | StructField
+type Symbol = Const | Function | FunctionType
 
 struct Const {
 mut:
@@ -182,26 +182,9 @@ fn (f FunctionType) gen() string {
 	return ''
 }
 
-// TODO
-struct Struct {
-	c_name string
-	v_name string
-	fields []StructField
-	doc    string
-}
-
-// TODO
-struct StructField {
-	c_name string
-	c_type string
-	v_name string
-	v_type string
-	doc    string
-}
-
 fn write_file_header(mut b strings.Builder, mod string, lib string, headers []string, headers_path string) {
 	modname := module_name
-	b.writeln($tmpl('notice.tmpl'))
+	b.writeln($tmpl('license_notice.tmpl'))
 	b.writeln('// ! WARNING !')
 	b.writeln('// This file is automatically written by generate.vsh')
 	b.writeln('// do not edit it manually, any changes made here will be lost!')
@@ -278,7 +261,7 @@ fn get_symbols_from_pkgconfig(doc xml.XMLDocument, ignore_file string) []Symbol 
 	mut symbols := []Symbol{}
 	for symbol in raw_symbols[0].children {
 		s := symbol as xml.XMLNode
-		if os.getenv('VGEN_PRINTALLC') != '' {
+		if os.getenv('VGEN_PRINT_ALL_C') != '' {
 			println('${s.name} ${s.attributes['name']} ${s.attributes['type']}')
 			continue
 		}
@@ -292,10 +275,7 @@ fn get_symbols_from_pkgconfig(doc xml.XMLDocument, ignore_file string) []Symbol 
 			'enum' {
 				all_symbols << extract_constant_def(s)
 			}
-			'struct' {
-				// TODO
-			}
-			else {} // Skip any macros, variables and typedefs
+			else {} // Skip any structs, macros, variables and typedefs
 		}
 	}
 	for symbol in all_symbols {
@@ -457,7 +437,7 @@ fn main() {
 	print(b)
 }
 
-@[xdoc: 'V code generator for libvirt binding.']
+@[xdoc: 'V code generator for libvirt bindings.']
 struct FlagConfig {
 	help          bool
 	by_prefix     []string

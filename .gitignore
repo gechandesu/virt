@@ -17,7 +17,6 @@ bin/
 # ENV
 .env
 
-/doc
-/gen/generate
-main.v
-TODO.txt
+/_docs
+/generate
+/make
