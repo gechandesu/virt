@@ -16,6 +16,8 @@ modules search path in `VFLAGS` environment variable:
 export VFLAGS="-path $(realpath $PWD/../../)|@vlib|@vmodules"
 ```
 
+Don't forget `unset VFLAGS` after running examples.
+
 The library assumes that `libvirtd` is installed and running on the host where
 the examples will be run, and that the user under which the code examples are
 run has access to the libvirtd socket. Usually, to allow access to the socket,
