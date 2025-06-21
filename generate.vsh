@@ -7,6 +7,7 @@ import encoding.xml
 import flag
 import os
 import strings
+import v.pkgconfig
 
 const module_name = 'virt'
 const symbols_ignore_file = 'symbols-ignore'
@@ -223,16 +224,21 @@ fn format_doc_string(doc string) string {
 }
 
 fn get_pkgconfig_data() []xml.XMLDocument {
-	pkgconf := os.execute_opt('pkg-config --variable libvirt_api libvirt') or {
+	pkgconf := pkgconfig.load('libvirt', pkgconfig.Options{}) or {
 		eprintln('error: cannot retrieve data from pkg-config: ${err}')
 		exit(1)
 	}
 	mut docs := []xml.XMLDocument{}
-	for api in ['api', 'qemu-api', 'lxc-api'] {
-		file := pkgconf.output.trim_space().replace_once('-api', '-' + api)
-		docs << xml.XMLDocument.from_file(file) or {
-			eprintln('error: cannot parse XML file ${file}: ${err}')
-			exit(1)
+	for k, v in pkgconf.vars {
+		// Typically results to:
+		// /usr/share/libvirt/api/libvirt-api.xml
+		// /usr/share/libvirt/api/libvirt-qemu-api.xml
+		// /usr/share/libvirt/api/libvirt-lxc-api.xml
+		if k.ends_with('api') {
+			docs << xml.XMLDocument.from_file(v) or {
+				eprintln('error: cannot parse XML file ${v}: ${err}')
+				exit(1)
+			}
 		}
 	}
 	return docs

@@ -27,13 +27,13 @@ fn C.virResetError(voidptr)
 struct C.virError {
 	code    int
 	domain  int
-	message &char = &char(''.str)
+	message &char = &char(c'')
 	level   voidptr
 	conn    voidptr
 	dom     voidptr
-	str1    &char = &char(''.str)
-	str2    &char = &char(''.str)
-	str3    &char = &char(''.str)
+	str1    &char = &char(c'')
+	str2    &char = &char(c'')
+	str3    &char = &char(c'')
 	int1    int
 	int2    int
 	net     voidptr
